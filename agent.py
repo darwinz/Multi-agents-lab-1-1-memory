@@ -22,8 +22,14 @@ def chat(user_input: str, window: SlidingWindowBuffer) -> str:
       5. Call window.add() to add the assistant reply to the sliding window.
       6. Return the reply string.
     """
-    # TODO: implement
-    raise NotImplementedError
+    store_memory(user_input, {"role": "user"})
+    window.add("user", user_input)
+    messages = build_context(user_input, window)
+    # Cap the reply so the request doesn't reserve the model's full output budget
+    response = client.chat.completions.create(model=MODEL, messages=messages, max_tokens=1024)
+    reply = response.choices[0].message.content or ""
+    window.add("assistant", reply)
+    return reply
 
 
 def main():

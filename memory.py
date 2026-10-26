@@ -69,12 +69,14 @@ class SlidingWindowBuffer:
         self._turns: list[dict] = []
 
     def add(self, role: str, content: str) -> None:
-        # TODO: append the turn and evict oldest if over max_turns
-        raise NotImplementedError
+        self._turns.append({"role": role, "content": content})
+        # Evict from the front so the oldest turns go first
+        while len(self._turns) > self.max_turns:
+            self._turns.pop(0)
 
     def get(self) -> list[dict]:
-        # TODO: return the current list of turns
-        raise NotImplementedError
+        # Return a copy so callers can't mutate the buffer
+        return list(self._turns)
 
     def __len__(self) -> int:
         return len(self._turns)
@@ -92,8 +94,16 @@ def store_memory(text: str, metadata: dict | None = None) -> str:
     Call collection.add() with ids, documents, and metadatas.
     Return the ID string.
     """
-    # TODO: implement
-    raise NotImplementedError
+    global _memory_counter
+    _memory_counter += 1
+    memory_id = f"mem_{_memory_counter:04d}"
+    collection.add(
+        ids=[memory_id],
+        documents=[text],
+        # Chroma rejects empty metadata dicts, so pass None when there is none
+        metadatas=[metadata] if metadata else None,
+    )
+    return memory_id
 
 
 # ── TODO 3: retrieve_memories ─────────────────────────────────────────────────
@@ -106,8 +116,12 @@ def retrieve_memories(query: str, top_k: int = TOP_K_MEMORIES) -> list[str]:
     Use collection.query() with n_results=min(top_k, collection.count()).
     Return the list of document strings (not metadata, not IDs).
     """
-    # TODO: implement
-    raise NotImplementedError
+    count = collection.count()
+    if count == 0:
+        return []
+    results = collection.query(query_texts=[query], n_results=min(top_k, count))
+    # One query in, so the results for it are at index 0
+    return results["documents"][0]
 
 
 # ── build_context (already done for you) ─────────────────────────────────────
